@@ -1,5 +1,6 @@
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from nsepython import *
 
 def fetch_oi_data(stock):
     try:
