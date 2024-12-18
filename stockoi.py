@@ -1,6 +1,7 @@
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from nsepython import *
+from datetime import datetime  # Import for date handling
 
 def fetch_oi_data(stock):
     try:
@@ -19,8 +20,11 @@ def fetch_oi_data(stock):
     except Exception as e:
         return f"Error fetching data for {stock}: {e}"
 
-def save_to_csv(data, filename="oi_data.csv"):
-    # Assuming data is a list of tuples like (stock, oi_data, ltp, crontime)
+def save_to_csv(data):
+    # Get the current date in dd-mm-yyyy format
+    current_date = datetime.now().strftime("%d-%m-%Y")
+    filename = f"oi_data_{current_date}.csv"
+    
     rows = []
     for stock, oi_data, ltp, crontime in data:
         # Flatten oi_data if it's a DataFrame or nested structure, otherwise adjust this part
@@ -36,6 +40,7 @@ def save_to_csv(data, filename="oi_data.csv"):
     # Convert to DataFrame and save to CSV
     df = pd.DataFrame(rows)
     df.to_csv(filename, index=False)
+    print(f"Data saved to {filename}")
 
 def fetch_all_oi_data_concurrently():
     results = []
