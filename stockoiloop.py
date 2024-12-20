@@ -72,4 +72,4 @@ schedule.every(5).minutes.do(job)
 print("Scheduler is running...")
 while True:
     schedule.run_pending()  # Check if any scheduled job is pending and execute it
-    sleep_time.sleep(1)  # Add a small delay to prevent excessive CPU usage
+    sleep_time.sleep(2)  # Add a small delay to prevent excessive CPU usage
