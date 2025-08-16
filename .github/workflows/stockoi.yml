@@ -3,7 +3,8 @@ name: Run stockoi Script
 on:
   schedule:
     # Run every day at 10 PM IST, Monday to Friday
-   - cron: '*/5 3-10 * * 1-5'  # This cron schedule runs every 5 minutes Monday to Friday, from 9:15 AM to 3:30 PM IST
+  - cron: '30 11 * * 1-5'  # Runs at 11:30 UTC (5:00 PM IST), Monday–Friday
+
   workflow_dispatch:  # Allows manual trigger of the workflow
 
 jobs:
