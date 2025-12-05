@@ -2,16 +2,23 @@ name: Delete old OI CSV files
 
 on:
   schedule:
-    - cron: "0 1 * * *"   # Runs every day at 01:00 AM
-  workflow_dispatch:      # Allow manual run
+    - cron: "0 1 * * *"
+  workflow_dispatch:
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (FULL)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Show files
+        run: |
+          echo "Existing CSV files:"
+          find . -type f -name "oi_data*.csv"
 
       - name: Delete CSV older than 30 days
         run: |
