@@ -1,8 +1,6 @@
-name: Delete old OI CSV files
+name: Delete old oi_data CSV files
 
 on:
-  schedule:
-    - cron: "0 1 * * *"
   workflow_dispatch:
 
 jobs:
@@ -10,61 +8,57 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository (FULL)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - uses: actions/checkout@v3
 
-      - name: Show files
-        run: |
-          echo "Existing CSV files:"
-          find . -type f -name "oi_data*.csv"
+    - name: Cleanup old files
+      shell: bash
+      run: |
+        today=$(date +%s)
 
-      - name: Delete CSV older than 30 days (filename or mtime)
-        run: |
-          echo "Deleting old oi_data CSV files..."
-          
-          cutoff=$(date -d "30 days ago" +%s)
-          
-          for file in $(find . -type f -name "oi_data*.csv"); do
-            fname=$(basename "$file")
+        for f in oi_data_*.csv; do
+          [ -f "$f" ] || continue
 
-            # Extract date if present: DD-MM-YYYY
-            datepart=$(echo "$fname" | grep -oP '\d{2}-\d{2}-\d{4}')
+          datepart=${f#oi_data_}
+          datepart=${datepart%.csv}
 
-            if [ -n "$datepart" ]; then
-              # Convert date from filename to epoch
-              file_epoch=$(date -d "$datepart" +%s || echo 0)
+          # extract DD MM YYYY
+          IFS='-' read -r dd mm yy <<< "$datepart"
 
-              if [ "$file_epoch" -le "$cutoff" ]; then
-                echo "DELETE by filename date: $fname ($datepart)"
-                rm "$file"
-              else
-                echo "KEEP by filename date: $fname ($datepart)"
-              fi
-            else
-              # No date in filename → use mtime
-              mtime_epoch=$(stat -c %Y "$file")
+          # reformat to YYYY-MM-DD
+          iso_date="${yy}-${mm}-${dd}"
 
-              if [ "$mtime_epoch" -le "$cutoff" ]; then
-                echo "DELETE by mtime: $fname (no date in filename)"
-                rm "$file"
-              else
-                echo "KEEP by mtime: $fname (no date in filename)"
-              fi
-            fi
-          done
+          # get epoch
+          file_epoch=$(date -d "$iso_date" +%s 2>/dev/null)
 
-      - name: Commit & push changes
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          if [ -n "$(git status --porcelain)" ]; then
-            git add -A
-            git commit -m "Auto delete old OI CSV files"
-            git push
-            echo "Old files deleted and pushed."
-          else
-            echo "No old files to delete."
+          if [[ -z "$file_epoch" ]]; then
+            echo "⚠ Cannot parse date: $f"
+            continue
           fi
+
+          # skip future
+          if (( file_epoch > today )); then
+            echo "⏭ FUTURE DATE SKIP: $f"
+            continue
+          fi
+
+          age=$(( (today - file_epoch) / 86400 ))
+
+          echo "$f age = $age days"
+
+          if (( age > 30 )); then
+            echo "🗑 DELETE: $f"
+            git rm "$f"
+          else
+            echo "✔ KEEP: $f"
+          fi
+        done
+
+        git config user.email "actions@github.com"
+        git config user.name "github-actions"
+
+        if git diff --cached --quiet; then
+          echo "No files deleted."
+        else
+          git commit -m "Auto clean old oi_data files"
+          git push
+        fi
