@@ -20,10 +20,40 @@ jobs:
           echo "Existing CSV files:"
           find . -type f -name "oi_data*.csv"
 
-      - name: Delete CSV older than 30 days
+      - name: Delete CSV older than 30 days (filename or mtime)
         run: |
-          echo "Finding files older than 30 days..."
-          find . -type f -name "oi_data*.csv" -mtime +30 -print -delete
+          echo "Deleting old oi_data CSV files..."
+          
+          cutoff=$(date -d "30 days ago" +%s)
+          
+          for file in $(find . -type f -name "oi_data*.csv"); do
+            fname=$(basename "$file")
+
+            # Extract date if present: DD-MM-YYYY
+            datepart=$(echo "$fname" | grep -oP '\d{2}-\d{2}-\d{4}')
+
+            if [ -n "$datepart" ]; then
+              # Convert date from filename to epoch
+              file_epoch=$(date -d "$datepart" +%s || echo 0)
+
+              if [ "$file_epoch" -le "$cutoff" ]; then
+                echo "DELETE by filename date: $fname ($datepart)"
+                rm "$file"
+              else
+                echo "KEEP by filename date: $fname ($datepart)"
+              fi
+            else
+              # No date in filename → use mtime
+              mtime_epoch=$(stat -c %Y "$file")
+
+              if [ "$mtime_epoch" -le "$cutoff" ]; then
+                echo "DELETE by mtime: $fname (no date in filename)"
+                rm "$file"
+              else
+                echo "KEEP by mtime: $fname (no date in filename)"
+              fi
+            fi
+          done
 
       - name: Commit & push changes
         run: |
