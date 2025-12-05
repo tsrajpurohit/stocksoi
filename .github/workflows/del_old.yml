@@ -1,0 +1,33 @@
+name: Delete old OI CSV files
+
+on:
+  schedule:
+    - cron: "0 1 * * *"   # Runs every day at 01:00 AM
+  workflow_dispatch:      # Allow manual run
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Delete CSV older than 30 days
+        run: |
+          echo "Finding files older than 30 days..."
+          find . -type f -name "oi_data*.csv" -mtime +30 -print -delete
+
+      - name: Commit & push changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "Auto delete old OI CSV files"
+            git push
+            echo "Old files deleted and pushed."
+          else
+            echo "No old files to delete."
+          fi
